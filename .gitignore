@@ -1,0 +1,19 @@
+node_modules/
+.next/
+out/
+dist/
+*.log
+.env*
+!.env.example
+.DS_Store
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+
+# Claude Code 本地工作目录
+.claude/
+
+# TypeScript 增量构建缓存
+*.tsbuildinfo
