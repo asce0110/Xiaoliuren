@@ -154,7 +154,8 @@ function assignDeities(dayPalace: PalaceName, dayBranch: Branch): Record<PalaceN
 
 
 // 吉凶判定：用"地支五行"对"六亲五行"生克
-function judge(branchEl: Element, kinEl: Element): Auspice {
+function judge(branchEl: Element, kinEl: Element | null): Auspice {
+  if (kinEl === null) return "平";
   if (branchEl === kinEl) return "平";
   if (generates(branchEl, kinEl)) return "大吉";
   if (generates(kinEl, branchEl)) return "次吉";
