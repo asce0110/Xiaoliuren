@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { divine, divineByName } from "@/lib/divine";
 import type { DivineResult } from "@/lib/divine";
-import { PALACE_GRID, PALACE_ELEMENT } from "@/lib/constants";
+import { PALACE_GRID, PALACE_ELEMENT, BRANCHES } from "@/lib/constants";
 import type { PalaceName, Auspice } from "@/lib/constants";
 
 function pad2(n: number) {
@@ -45,6 +45,43 @@ const AUSPICE_COLOR: Record<Auspice, string> = {
 const DEITY_ELEMENT: Record<string, string> = {
   青龙: "木", 朱雀: "火", 勾陈: "土", 腾蛇: "土", 白虎: "金", 玄武: "水",
 };
+
+const AUSPICE_WEIGHT: Record<Auspice, number> = {
+  大吉: 4, 次吉: 3, 平: 2, 小凶: 1, 大凶: 0,
+};
+
+// 地支 → 数字（0-9）
+function branchToDigit(branch: string): number {
+  return BRANCHES.indexOf(branch as (typeof BRANCHES)[number]) % 10;
+}
+
+function getLotteryNumbers(result: DivineResult): { digits: number[]; label: string }[] {
+  const sorted = [...result.board].sort(
+    (a, b) => AUSPICE_WEIGHT[b.auspice] - AUSPICE_WEIGHT[a.auspice]
+  );
+  const digits = sorted.map((c) => branchToDigit(c.branch));
+  const groups: { digits: number[]; label: string }[] = [];
+
+  // 组1：前三吉宫地支数字
+  groups.push({ digits: digits.slice(0, 3), label: "三吉组合" });
+  // 组2：自身宫 + 两吉宫
+  const selfIdx = sorted.findIndex((c) => c.isSelf);
+  const selfDigit = digits[selfIdx];
+  const others = digits.filter((_, i) => i !== selfIdx).slice(0, 2);
+  groups.push({ digits: [selfDigit, ...others], label: "自身引吉" });
+  // 组3：月宫+日宫+时宫
+  const get = (p: PalaceName) => branchToDigit(result.board.find((c) => c.palace === p)!.branch);
+  groups.push({
+    digits: [get(result.monthPalace), get(result.dayPalace), get(result.hourPalace)],
+    label: "三才定数",
+  });
+  // 组4：吉宫地支数字顺序轮换
+  groups.push({ digits: [digits[1], digits[0], digits[2]], label: "轮转吉数" });
+  // 组5：次吉+大吉+大吉（重组）
+  groups.push({ digits: [digits[2], digits[1], digits[0]], label: "逆序归元" });
+
+  return groups;
+}
 
 export default function Home() {
   const [now, setNow] = useState<Date | null>(null);
@@ -348,6 +385,35 @@ export default function Home() {
           月落宫：{result.monthPalace} · 日落宫：{result.dayPalace} · 时落宫（自身）：
           {result.hourPalace} · 自身地支：{result.selfBranch}
         </footer>
+      )}
+
+      {result && (
+        <section className="mt-6 ink-card rounded-lg p-4 md:p-6">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-lg tracking-[0.4em] text-jinhuang">福 彩 3D · 玄 数</h2>
+            <span className="text-xs text-xuanzhi/40 tracking-widest">仅供娱乐，理性购彩</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            {getLotteryNumbers(result).map(({ digits, label }) => (
+              <div key={label} className="border border-jinhuang/30 rounded p-3 flex flex-col items-center gap-2">
+                <div className="flex gap-2">
+                  {digits.map((d, i) => (
+                    <span
+                      key={i}
+                      className="w-9 h-9 flex items-center justify-center border border-zhusha/60 text-zhusha text-xl font-bold rounded-sm"
+                    >
+                      {d}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-xs text-xuanzhi/50 tracking-widest">{label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-xuanzhi/30 text-center tracking-wide">
+            以卦象地支序数映射 0-9，取吉宫组合推演 · 娱乐参考，请勿沉迷
+          </p>
+        </section>
       )}
     </main>
   );
